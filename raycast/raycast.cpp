@@ -1,12 +1,12 @@
 /***********************************************************
- * CMPT 361, Summer 2012
+ * CMPT 361, Spring 2016
  *
  *  raycast.cpp
  *      
  *  Render a simple scene using ray tracing
  * 
- *  NAME:
- *  SFU ID:
+ *  NAME: Matthew Tseng
+ *  SFU ID: 301228244
  *
  *  Template code for drawing a scene using raycasting.
  *  Some portions of the code was originally written by 
