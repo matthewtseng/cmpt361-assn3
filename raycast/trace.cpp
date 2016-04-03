@@ -42,11 +42,27 @@ extern int step_max;
 /*********************************************************************
  * Phong illumination - you need to implement this!
  *********************************************************************/
-RGB_float phong(Point q, Vector v, Vector surf_norm, Spheres *sph) {
-//
-// do your thing here
-//
-	RGB_float color;
+RGB_float phong(Point p, Vector v, Vector surf_norm, Spheres *sph) {  
+
+  Vector light_vec = get_vec(p, light1);
+  float light_vec_len = vec_len(light_vec);
+  normalize(&light_vec);
+
+  float costheta = vec_dot(surf_norm, light_vec);
+  Vector reflected_vec = vec_minus(vec_scale(surf_norm, 2*costheta), light_vec); 
+  normalize(&reflected_vec);
+
+  RGB_float color = {0, 0, 0};
+  RGB_float diffuse = {0, 0, 0};
+  RGB_float ambient = {0, 0 , 0};
+  RGB_float specular = {0, 0, 0};
+
+  float decay = 1/(decay_a + decay_b * light_vec_len + decay_c * pow(light_vec_len, 2));
+
+  ambient.r += global_ambient[0] * sph->mat_ambient[0];
+  ambient.g += global_ambient[1] * sph->mat_ambient[1];
+  ambient.b += global_ambient[2] * sph->mat_ambient[2];
+
 	return color;
 }
 
@@ -55,9 +71,7 @@ RGB_float phong(Point q, Vector v, Vector surf_norm, Spheres *sph) {
  * You should decide what arguments to use.
  ************************************************************************/
 RGB_float recursive_ray_trace() {
-//
-// do your thing here
-//
+
 	RGB_float color;
 	return color;
 }
