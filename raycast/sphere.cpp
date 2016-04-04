@@ -21,30 +21,31 @@ float intersect_sphere(Point o, Vector u, Spheres *sph, Point *hit) {
 
   float a, b, c, disc, t0, t1;
 
-  a = u.x * u.x + u.y * u.y + u.z * u.z;
-  b = 2.0f * (u.x * (o.x - sph->center.x) + u.y * (o.y - sph->center.x) + u.z * (o.z - sph->center.z));
-  c = pow(sph->center.x, 2) + pow(sph->center.y, 2) + pow(sph->center.z, 2) +
-      pow(o.x, 2) + pow(o.y, 2) + pow(o.z, 2) -
-      2.0f * (o.x * sph->center.x + o.y * sph->center.y + o.z * sph->center.z) + pow(sph->radius, 2);
+  a = vec_dot(u, u); // u.x * u.x + u.y * u.y + u.z * u.z;
+  b = 2.0f * (u.x * (o.x - sph->center.x) + 
+      u.y * (o.y - sph->center.y) + 
+      u.z * (o.z - sph->center.z));
+  c = pow(o.x - sph->center.x, 2) + pow(o.y - sph->center.y, 2) + pow(o.z - sph->center.z, 2) - pow(sph->radius, 2);
   disc = pow(b, 2) - 4.0f * a * c;
 
   if (disc >= 0) 
   {
-    t0 = (-b + sqrt(disc)) / (2 * a); // for the negative value
-    // t1 = (-b + sqrt(disc)) / (2 * a); // for the positive value, unused at the moment
+    t0 = (-b - sqrt(disc)) / (2 * a); // for the negative value
+    t1 = (-b + sqrt(disc)) / (2 * a); // for the positive value, unused at the moment
 
-    if (t0 > 0)
+    if (t0 < t1 && t0 >= 0)
     {
       hit->x = o.x + t0 * u.x;
       hit->y = o.y + t0 * u.y;
       hit->z = o.z + t0 * u.z;
-
-      Vector hit_vec = {hit->x - o.x, hit->y - o.y, hit->z - o.z};
-      return vec_len(hit_vec);
+      return t0;
     } 
-    else
+    else if (t1 < t0 && t1 >= 0)
     {
-      return -1.0;
+      hit->x = o.x + t1 * u.x;
+      hit->y = o.y + t1 * u.y;
+      hit->z = o.z + t1 * u.z;
+      return t1;
     }
   }
   else
@@ -52,6 +53,7 @@ float intersect_sphere(Point o, Vector u, Spheres *sph, Point *hit) {
     return -1.0;
   }
 
+  return -1.0;
 }
 
 /*********************************************************************
@@ -69,15 +71,13 @@ Spheres *intersect_scene(Point o, Vector u, Spheres *sph, Point *hit, int i) {
   while (sph != NULL) 
   {
     current_distance = intersect_sphere(o, u, sph, hit);
-    if (current_distance == -1.0) return NULL;
 
-    // checks for shortest distance and checks if current_distance returns a valid return value (i.e. not -1.0)
-    if (shortest_distance > current_distance)
+    if (shortest_distance > current_distance && current_distance != -1.0)
     {
       shortest_distance = current_distance;
       closest = sph;
-    }
-
+    } 
+    
     sph = sph->next;
   }
 
