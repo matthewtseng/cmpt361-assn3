@@ -64,25 +64,17 @@ RGB_float phong(Point p, Vector v, Vector surf_norm, Spheres *sph) {
   ambient.g += sph->mat_ambient[1] * global_ambient[1];
   ambient.b += sph->mat_ambient[2] * global_ambient[2];
 
-  diffuse.r += attenuation * (sph->mat_diffuse[0] * light1_intensity[0] * vec_dot(surf_norm, light_vec));
-  diffuse.g += attenuation * (sph->mat_diffuse[1] * light1_intensity[1] * vec_dot(surf_norm, light_vec));
-  diffuse.b += attenuation * (sph->mat_diffuse[2] * light1_intensity[2] * vec_dot(surf_norm, light_vec));
+  diffuse.r += sph->mat_diffuse[0] * light1_intensity[0] * vec_dot(surf_norm, light_vec);
+  diffuse.g += sph->mat_diffuse[1] * light1_intensity[1] * vec_dot(surf_norm, light_vec);
+  diffuse.b += sph->mat_diffuse[2] * light1_intensity[2] * vec_dot(surf_norm, light_vec);
 
-  specular.r += attenuation * (sph->mat_specular[0] * light1_intensity[0] * pow(vec_dot(reflected_vec, v), sph->mat_shineness));
-  specular.g += attenuation * (sph->mat_specular[1] * light1_intensity[1] * pow(vec_dot(reflected_vec, v), sph->mat_shineness));
-  specular.b += attenuation * (sph->mat_specular[2] * light1_intensity[2] * pow(vec_dot(reflected_vec, v), sph->mat_shineness));
+  specular.r += sph->mat_specular[0] * light1_intensity[0] * pow(vec_dot(reflected_vec, v), sph->mat_shineness);
+  specular.g += sph->mat_specular[1] * light1_intensity[1] * pow(vec_dot(reflected_vec, v), sph->mat_shineness);
+  specular.b += sph->mat_specular[2] * light1_intensity[2] * pow(vec_dot(reflected_vec, v), sph->mat_shineness);
 
-  color.r = light1_intensity[0] * ambient.r + 
-            light1_intensity[1] * diffuse.r * vec_dot(surf_norm, light_vec) + 
-            light1_intensity[2] * specular.r * pow(vec_dot(v, reflected_vec), sph->mat_shineness);
-
-  color.g = light1_intensity[0] * ambient.g + 
-            light1_intensity[1] * diffuse.g * vec_dot(surf_norm, light_vec) + 
-            light1_intensity[2] * specular.g * pow(vec_dot(v, reflected_vec), sph->mat_shineness);        
-
-  color.g = light1_intensity[0] * ambient.b + 
-            light1_intensity[1] * diffuse.b * vec_dot(surf_norm, light_vec) + 
-            light1_intensity[2] * specular.b * pow(vec_dot(v, reflected_vec), sph->mat_shineness);                   
+  color.r = global_ambient[0] * ambient.r + (light1_intensity[0] / attenuation) * (diffuse.r + specular.r);
+  color.g = global_ambient[1] * ambient.g + (light1_intensity[1] / attenuation) * (diffuse.g + specular.g);        
+  color.b = global_ambient[2] * ambient.b + (light1_intensity[2] / attenuation) * (diffuse.b + specular.b);                   
 
 	return color;
 }
@@ -96,22 +88,22 @@ RGB_float recursive_ray_trace(Point p, Vector v, int i) {
 	RGB_float color = {0, 0, 0};
 
   Spheres *sph;
-  Point *hit = 0;
-  sph = intersect_scene(p, v, scene, hit, 0);
+  Point hit;
+  sph = intersect_scene(p, v, scene, &hit, 0);
 
   // if the closest sphere has been found
   if (sph != NULL)
   {
-    Vector eye_vec = get_vec(*hit, eye_pos);
+    Vector eye_vec = get_vec(hit, eye_pos);
     normalize(&eye_vec);
 
-    Vector light_vec = get_vec(*hit, p);
+    Vector light_vec = get_vec(hit, p);
     normalize(&light_vec);
 
-    Vector surf_norm = sphere_normal(*hit, sph);
+    Vector surf_norm = sphere_normal(hit, sph);
     normalize(&surf_norm);
 
-    color = phong(*hit, v, surf_norm, sph);
+    color = phong(hit, v, surf_norm, sph);
   }
 
 	return color;
