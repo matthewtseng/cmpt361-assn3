@@ -105,8 +105,8 @@ void set_up_user_scene() {
   float sphere1_ambient[] = {0.7, 0.7, 0.7};
   float sphere1_diffuse[] = {0.1, 0.5, 0.8};
   float sphere1_specular[] = {1.0, 1.0, 1.0};
-  float sphere1_shineness = 10;
-  float sphere1_reflectance = 0.4;
+  float sphere1_shineness = 3;
+  float sphere1_reflectance = 0.75;
   scene = add_sphere(scene, sphere1_ctr, sphere1_rad, sphere1_ambient,
              sphere1_diffuse, sphere1_specular, sphere1_shineness,
          sphere1_reflectance, 1);
@@ -118,7 +118,7 @@ void set_up_user_scene() {
   float sphere2_diffuse[] = {1.0, 0.0, 0.25};
   float sphere2_specular[] = {1.0, 1.0, 1.0};
   float sphere2_shineness = 6;
-  float sphere2_reflectance = 0.3;
+  float sphere2_reflectance = 0.5;
   scene = add_sphere(scene, sphere2_ctr, sphere2_rad, sphere2_ambient,
              sphere2_diffuse, sphere2_specular, sphere2_shineness,
          sphere2_reflectance, 2);
@@ -130,8 +130,8 @@ void set_up_user_scene() {
   float sphere3_ambient[] = {0.6, 0.6, 0.6};
   float sphere3_diffuse[] = {1.0, 1.0, 0.25};
   float sphere3_specular[] = {1.0, 1.0, 1.0};
-  float sphere3_shineness = 10;
-  float sphere3_reflectance = 0.7;
+  float sphere3_shineness = 5;
+  float sphere3_reflectance = 0.4;
   scene = add_sphere(scene, sphere3_ctr, sphere3_rad, sphere3_ambient,
              sphere3_diffuse, sphere3_specular, sphere3_shineness,
          sphere3_reflectance, 3);

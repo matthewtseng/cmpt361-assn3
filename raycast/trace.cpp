@@ -35,24 +35,75 @@ extern float decay_b;
 extern float decay_c;
 
 extern int shadow_on;
+extern int reflection_on;
+extern int refraction_on;
+extern int chessboard_on;
+extern int stochastic_on;
+extern int supersampling_on;
 extern int step_max;
 
 /////////////////////////////////////////////////////////////////////
+
+/*********************************************************************
+ * Ray-plane intersection and colour board
+ * 
+ * Used this website as reference for ray intersection with board:
+ * https://www.cs.princeton.edu/courses/archive/fall00/cs426/lectures/raycast/sld017.htm
+ *
+ *********************************************************************/
+
+float intersect_board(Point p, Vector v, Point *board_hit, Vector board_norm, Point *hit)
+{
+
+  // calculating distance from eye to plane
+  Vector dist;
+  dist.x = p.x - board_hit->x;
+  dist.y = p.y - board_hit->y;
+  dist.z = p.z - board_hit->z;
+  float d = vec_len(dist);
+
+  // calculating t
+  float num = -(vec_dot(dist, board_norm), d);
+  float denom = vec_dot(v, board_norm);
+  float t = num / denom;
+
+  if (denom == 0 && num != 0) return -1.0; // no intersection point
+
+  if (t > 0) // intersection point
+  {
+    hit->x = p.x + t * v.x;
+    hit->y = p.y + t * v.y;
+    hit->z = p.z + t * v.z;
+    return t;
+  }
+
+  return -1.0;
+}
+
+RGB_float color_board()
+{
+  RGB_float color;
+  return color;
+}
 
 /*********************************************************************
  * Phong illumination - you need to implement this!
  *********************************************************************/
 RGB_float phong(Point p, Vector v, Vector surf_norm, Spheres *sph) {  
 
+  // calculating light vector
   Vector light_vec = get_vec(p, light1);
   float delta = vec_len(light_vec);
   normalize(&light_vec);
 
+  // calculating reflected ray vector
   float costheta = vec_dot(surf_norm, light_vec);
   Vector reflected_vec = vec_minus(vec_scale(surf_norm, 2*costheta), light_vec); 
   normalize(&reflected_vec);
+
   float vr = vec_dot(v, reflected_vec);
 
+  // place holders for each component of Phong illumination
   RGB_float color = {0, 0, 0};
   RGB_float diffuse = {0, 0, 0};
   RGB_float ambient = {0, 0, 0};
@@ -60,8 +111,11 @@ RGB_float phong(Point p, Vector v, Vector surf_norm, Spheres *sph) {
 
   // used for diffuse and specular color
   float attenuation = 1 / (decay_a + decay_b * delta + decay_c * pow(delta, 2));
+
+  // shadow multiplier
   float shadow = 1.0;
 
+  // calculating ambient
   ambient.r += sph->mat_ambient[0] * global_ambient[0];
   ambient.g += sph->mat_ambient[1] * global_ambient[1];
   ambient.b += sph->mat_ambient[2] * global_ambient[2];
@@ -71,6 +125,7 @@ RGB_float phong(Point p, Vector v, Vector surf_norm, Spheres *sph) {
     costheta = 0;
   }
 
+  // calculating diffuse
   diffuse.r += sph->mat_diffuse[0] * costheta;
   diffuse.g += sph->mat_diffuse[1] * costheta;
   diffuse.b += sph->mat_diffuse[2] * costheta;
@@ -80,6 +135,7 @@ RGB_float phong(Point p, Vector v, Vector surf_norm, Spheres *sph) {
     vr = 0;
   }
 
+  // calculating specular
   specular.r += sph->mat_specular[0] * pow(vr, sph->mat_shineness);
   specular.g += sph->mat_specular[1] * pow(vr, sph->mat_shineness);
   specular.b += sph->mat_specular[2] * pow(vr, sph->mat_shineness);
@@ -89,6 +145,7 @@ RGB_float phong(Point p, Vector v, Vector surf_norm, Spheres *sph) {
     if (intersect_scene(p, light_vec, scene, NULL, 1) != NULL) shadow = 0.0; // if object is in shadow
   }
 
+  // final color
   color.r += ambient.r + (light1_intensity[0] * shadow * attenuation) * (diffuse.r + specular.r);
   color.g += ambient.g + (light1_intensity[1] * shadow * attenuation) * (diffuse.g + specular.g);        
   color.b += ambient.b + (light1_intensity[2] * shadow * attenuation) * (diffuse.b + specular.b);   
@@ -100,9 +157,14 @@ RGB_float phong(Point p, Vector v, Vector surf_norm, Spheres *sph) {
  * This is the recursive ray tracer - you need to implement this!
  * You should decide what arguments to use.
  ************************************************************************/
-RGB_float recursive_ray_trace(Point p, Vector v, int i) {
+RGB_float recursive_ray_trace(Point p, Vector v, int step) {
 
 	RGB_float color = background_clr;
+
+  // place holders for refracted and reflected color to be added on 
+  // to color at the end if options are turned on
+  RGB_float reflected_color = {0, 0, 0};
+  // RGB_float refracted_color = {0, 0, 0};
 
   Spheres *sph;
   Point hit;
@@ -111,13 +173,31 @@ RGB_float recursive_ray_trace(Point p, Vector v, int i) {
   // if the closest sphere has been found
   if (sph != NULL)
   {
+    // calculating light vector
+    Vector light_vec = get_vec(p, light1);
+    normalize(&light_vec);
+
+    // calculating eye vector
     Vector eye_vec = get_vec(hit, eye_pos);
     normalize(&eye_vec);
 
+    // calculating surface normal
     Vector surf_norm = sphere_normal(hit, sph);
     normalize(&surf_norm);
 
     color = phong(hit, eye_vec, surf_norm, sph);
+
+    if (reflection_on == 1 && step < step_max)
+    {
+      // calculating reflected vector
+      float costheta = vec_dot(surf_norm, light_vec);
+      Vector reflected_vec = vec_minus(vec_scale(surf_norm, 2*costheta), light_vec);  
+      normalize(&reflected_vec);
+
+      reflected_color = recursive_ray_trace(hit, reflected_vec, step + 1);
+      reflected_color = clr_scale(reflected_color, sph->reflectance);
+      color = clr_add(color, reflected_color);
+    }
 
     return color;
   }
