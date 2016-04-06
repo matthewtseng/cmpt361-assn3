@@ -52,18 +52,17 @@ extern int step_max;
  *
  *********************************************************************/
 
-float intersect_board(Point p, Vector v, Point *board_hit, Vector board_norm, Point *hit)
+float intersect_board(Point p, Vector v, Spheres *board, Vector board_norm, Point *hit)
 {
 
-  // calculating distance from eye to plane
-  Vector dist;
-  dist.x = p.x - board_hit->x;
-  dist.y = p.y - board_hit->y;
-  dist.z = p.z - board_hit->z;
-  float d = vec_len(dist);
+  Vector eye;
+  eye.x = p.x;
+  eye.y = p.y;
+  eye.z = p.z;
+  float d = fabs(board->center.y);
 
   // calculating t
-  float num = -(vec_dot(dist, board_norm), d);
+  float num = -(vec_dot(eye, board_norm) + d);
   float denom = vec_dot(v, board_norm);
   float t = num / denom;
 
@@ -71,18 +70,43 @@ float intersect_board(Point p, Vector v, Point *board_hit, Vector board_norm, Po
 
   if (t > 0) // intersection point
   {
-    hit->x = p.x + t * v.x;
-    hit->y = p.y + t * v.y;
-    hit->z = p.z + t * v.z;
-    return t;
+    Point board_hit = {0, 0, 0};
+    board_hit.x = p.x + t * v.x;
+    board_hit.y = p.y + t * v.y;
+    board_hit.z = p.z + t * v.z;
+
+    Point center = board->center;
+    float midpoint = board->radius;
+
+    // checks if the hit is on the board
+    if (board_hit.x > center.x + midpoint && 
+        board_hit.x < center.x - midpoint &&
+        board_hit.z > center.z + midpoint && 
+        board_hit.z < center.z - midpoint) 
+    {
+      hit->x = p.x + t * v.x;
+      hit->y = p.y + t * v.y;
+      hit->z = p.z + t * v.z;
+      return t;
+    }
   }
 
   return -1.0;
 }
 
-RGB_float color_board()
+RGB_float color_board(Point p)
 {
   RGB_float color;
+
+  if (p.x % 2 == 0 && p.z % 2 == 0)
+    color = {0, 0, 0};
+  else if (p.x % 2 != 0 && p.z % 2 != 0)
+    color = {0, 0, 0};
+  else if (p.x % 2 != 0 && p.z % 2 == 0)
+    color = {1, 1, 1};
+  else if (p.x % 2 == 0 && p.z % 2 != 0)
+    color = {1, 1, 1};
+
   return color;
 }
 
