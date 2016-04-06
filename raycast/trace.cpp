@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <GL/glut.h>
 #include <math.h>
 #include "global.h"
 #include "sphere.h"
+#include <time.h>
 
 //
 // Global variables
@@ -37,7 +39,7 @@ extern float decay_c;
 extern int shadow_on;
 extern int reflection_on;
 extern int refraction_on;
-extern int chessboard_on;
+extern int checkerboard_on;
 extern int stochastic_on;
 extern int supersampling_on;
 extern int step_max;
@@ -52,62 +54,76 @@ extern int step_max;
  *
  *********************************************************************/
 
-float intersect_board(Point p, Vector v, Spheres *board, Vector board_norm, Point *hit)
+// float intersect_board(Point p, Vector v, Spheres *board, Vector board_norm, Point *hit)
+// {
+
+//   Vector eye;
+//   eye.x = p.x;
+//   eye.y = p.y;
+//   eye.z = p.z;
+//   float d = fabs(board->center.y);
+
+//   // calculating t
+//   float num = -(vec_dot(eye, board_norm) + d);
+//   float denom = vec_dot(v, board_norm);
+//   float t = num / denom;
+
+//   if (denom == 0 && num != 0) return -1.0; // no intersection point
+
+//   if (t > 0) // intersection point
+//   {
+//     Point board_hit = {0, 0, 0};
+//     board_hit.x = p.x + t * v.x;
+//     board_hit.y = p.y + t * v.y;
+//     board_hit.z = p.z + t * v.z;
+
+//     Point center = board->center;
+//     float midpoint = board->radius;
+
+//     // checks if the hit is on the board
+//     if (board_hit.x > center.x + midpoint && 
+//         board_hit.x < center.x - midpoint &&
+//         board_hit.z > center.z + midpoint && 
+//         board_hit.z < center.z - midpoint) 
+//     {
+//       hit->x = p.x + t * v.x;
+//       hit->y = p.y + t * v.y;
+//       hit->z = p.z + t * v.z;
+//       return t;
+//     }
+//   }
+
+//   return -1.0;
+// }
+
+// RGB_float color_board(Point p)
+// {
+//   RGB_float color;
+
+//   if ((int)p.x % 2 == 0 && (int)p.z % 2 == 0)
+//     color = {0, 0, 0};
+//   else if ((int)p.x % 2 != 0 && (int)p.z % 2 != 0)
+//     color = {0, 0, 0};
+//   else if ((int)p.x % 2 != 0 && (int)p.z % 2 == 0)
+//     color = {1, 1, 1};
+//   else if ((int)p.x % 2 == 0 && (int)p.z % 2 != 0)
+//     color = {1, 1, 1};
+
+//   return color;
+// }
+
+Vector stochastic(Vector surf_norm)
 {
+  Vector random = {0, 0, 0};
 
-  Vector eye;
-  eye.x = p.x;
-  eye.y = p.y;
-  eye.z = p.z;
-  float d = fabs(board->center.y);
-
-  // calculating t
-  float num = -(vec_dot(eye, board_norm) + d);
-  float denom = vec_dot(v, board_norm);
-  float t = num / denom;
-
-  if (denom == 0 && num != 0) return -1.0; // no intersection point
-
-  if (t > 0) // intersection point
+  while (vec_dot(random, surf_norm) < 0) 
   {
-    Point board_hit = {0, 0, 0};
-    board_hit.x = p.x + t * v.x;
-    board_hit.y = p.y + t * v.y;
-    board_hit.z = p.z + t * v.z;
-
-    Point center = board->center;
-    float midpoint = board->radius;
-
-    // checks if the hit is on the board
-    if (board_hit.x > center.x + midpoint && 
-        board_hit.x < center.x - midpoint &&
-        board_hit.z > center.z + midpoint && 
-        board_hit.z < center.z - midpoint) 
-    {
-      hit->x = p.x + t * v.x;
-      hit->y = p.y + t * v.y;
-      hit->z = p.z + t * v.z;
-      return t;
-    }
+    random.x = (float)(rand()) / (float)(RAND_MAX);
+    random.y = (float)(rand()) / (float)(RAND_MAX);
+    random.z = (float)(rand()) / (float)(RAND_MAX);
   }
 
-  return -1.0;
-}
-
-RGB_float color_board(Point p)
-{
-  RGB_float color;
-
-  if (p.x % 2 == 0 && p.z % 2 == 0)
-    color = {0, 0, 0};
-  else if (p.x % 2 != 0 && p.z % 2 != 0)
-    color = {0, 0, 0};
-  else if (p.x % 2 != 0 && p.z % 2 == 0)
-    color = {1, 1, 1};
-  else if (p.x % 2 == 0 && p.z % 2 != 0)
-    color = {1, 1, 1};
-
-  return color;
+  return random;
 }
 
 /*********************************************************************
@@ -183,12 +199,18 @@ RGB_float phong(Point p, Vector v, Vector surf_norm, Spheres *sph) {
  ************************************************************************/
 RGB_float recursive_ray_trace(Point p, Vector v, int step) {
 
+  // random seed for random function used for stochastic rays
+  srand(time(NULL));
+
+  // float board_t = -1.0;
+
 	RGB_float color = background_clr;
 
   // place holders for refracted and reflected color to be added on 
   // to color at the end if options are turned on
   RGB_float reflected_color = {0, 0, 0};
   // RGB_float refracted_color = {0, 0, 0};
+  RGB_float stochastic_color = {0, 0, 0};
 
   Spheres *sph;
   Point hit;
@@ -211,6 +233,15 @@ RGB_float recursive_ray_trace(Point p, Vector v, int step) {
 
     color = phong(hit, eye_vec, surf_norm, sph);
 
+    // if (checkerboard_on == 1)
+    // {
+    //   Spheres *board;
+    //   Point board_hit;
+    //   Vector board_norm = {0, 1, 0};
+    //   float board_t = intersect_board(p, v, board, board_norm, &board_hit);
+    //   color = color_board(board_hit);
+    // }
+
     if (reflection_on == 1 && step < step_max)
     {
       // calculating reflected vector
@@ -221,6 +252,26 @@ RGB_float recursive_ray_trace(Point p, Vector v, int step) {
       reflected_color = recursive_ray_trace(hit, reflected_vec, step + 1);
       reflected_color = clr_scale(reflected_color, sph->reflectance);
       color = clr_add(color, reflected_color);
+    }
+
+    if (refraction_on == 1 && step < step_max)
+    {
+
+    }
+
+    if (stochastic_on == 1 && step < step_max)
+    {
+      for (int i = 0; i < 5; i++) 
+      {
+        // calculating stochastic color
+        RGB_float stochastic_recurse = recursive_ray_trace(hit, stochastic(surf_norm), step + 1);
+        stochastic_color.r += stochastic_recurse.r * sph->mat_diffuse[0];
+        stochastic_color.g += stochastic_recurse.g * sph->mat_diffuse[1];
+        stochastic_color.b += stochastic_recurse.b * sph->mat_diffuse[2];
+      }
+
+      stochastic_color = clr_scale(stochastic_color, (float)(1.0/5.0));
+      color = clr_add(color, stochastic_color);
     }
 
     return color;
@@ -252,6 +303,13 @@ void ray_trace() {
   cur_pixel_pos.y = y_start + 0.5 * y_grid_size;
   cur_pixel_pos.z = image_plane;
 
+  // supersampling variable
+  Point ss_nw_pixel_pos;
+  Point ss_ne_pixel_pos;
+  Point ss_se_pixel_pos;
+  Point ss_sw_pixel_pos;
+  RGB_float ss_color;
+
   for (i=0; i<win_height; i++) {
     for (j=0; j<win_width; j++) {
       ray = get_vec(eye_pos, cur_pixel_pos);
@@ -266,7 +324,43 @@ void ray_trace() {
       //
       // ray.x = ray.y = 0;
       // ray.z = -1.0;
-      ret_color = recursive_ray_trace(cur_pixel_pos, ray, 1);
+      ret_color = recursive_ray_trace(cur_pixel_pos, ray, 0);
+
+      if (supersampling_on == 1)
+      {
+        // northwest pixel
+        ss_nw_pixel_pos.x = cur_pixel_pos.x - 0.5 * x_grid_size;
+        ss_nw_pixel_pos.y = cur_pixel_pos.y + 0.5 * y_grid_size;
+        ss_nw_pixel_pos.z = cur_pixel_pos.z;
+        ray = get_vec(eye_pos, ss_nw_pixel_pos);
+        ss_color = recursive_ray_trace(eye_pos, ray, 0);
+        ret_color = clr_add(ret_color, ss_color);
+
+        // northeast pixel
+        ss_ne_pixel_pos.x = cur_pixel_pos.x + 0.5 * x_grid_size;
+        ss_ne_pixel_pos.y = cur_pixel_pos.y + 0.5 * y_grid_size;
+        ss_ne_pixel_pos.z = cur_pixel_pos.z;
+        ray = get_vec(eye_pos, ss_ne_pixel_pos);
+        ss_color = recursive_ray_trace(eye_pos, ray, 0);
+        ret_color = clr_add(ret_color, ss_color);
+
+        // southeast pixel
+        ss_se_pixel_pos.x = cur_pixel_pos.x + 0.5 * x_grid_size;
+        ss_se_pixel_pos.y = cur_pixel_pos.y - 0.5 * y_grid_size;
+        ss_se_pixel_pos.z = cur_pixel_pos.z;
+        ray = get_vec(eye_pos, ss_se_pixel_pos);
+        ss_color = recursive_ray_trace(eye_pos, ray, 0);
+        ret_color = clr_add(ret_color, ss_color);
+
+        // southwest pixel
+        ss_sw_pixel_pos.x = cur_pixel_pos.x - 0.5 * x_grid_size;
+        ss_sw_pixel_pos.y = cur_pixel_pos.y - 0.5 * y_grid_size;
+        ss_sw_pixel_pos.z = cur_pixel_pos.z;
+        ray = get_vec(eye_pos, ss_sw_pixel_pos);
+        ss_color = recursive_ray_trace(eye_pos, ray, 0);
+        ret_color = clr_add(ret_color, ss_color);
+
+      }
 
 // Checkboard for testing
 // RGB_float clr = {float(i/32), 0, float(j/32)};
