@@ -59,7 +59,8 @@ RGB_float phong(Point p, Vector v, Vector surf_norm, Spheres *sph) {
   RGB_float specular = {0, 0, 0};
 
   // used for diffuse and specular color
-  float attenuation = decay_a + decay_b * delta + decay_c * pow(delta, 2);
+  float attenuation = 1 / (decay_a + decay_b * delta + decay_c * pow(delta, 2));
+  float shadow = 1.0;
 
   ambient.r += sph->mat_ambient[0] * global_ambient[0];
   ambient.g += sph->mat_ambient[1] * global_ambient[1];
@@ -83,14 +84,14 @@ RGB_float phong(Point p, Vector v, Vector surf_norm, Spheres *sph) {
   specular.g += sph->mat_specular[1] * pow(vr, sph->mat_shineness);
   specular.b += sph->mat_specular[2] * pow(vr, sph->mat_shineness);
 
-  color.r += ambient.r + (light1_intensity[0] / attenuation) * (diffuse.r + specular.r);
-  color.g += ambient.g + (light1_intensity[1] / attenuation) * (diffuse.g + specular.g);        
-  color.b += ambient.b + (light1_intensity[2] / attenuation) * (diffuse.b + specular.b);                   
-
-  if (shadow_on == 1 && intersect_scene(p, light_vec, scene, NULL, 1) != NULL) 
+  if (shadow_on == 1) 
   {
-      color = ambient;
+    if (intersect_scene(p, light_vec, scene, NULL, 1) != NULL) shadow = 0.0; // if object is in shadow
   }
+
+  color.r += ambient.r + (light1_intensity[0] * shadow * attenuation) * (diffuse.r + specular.r);
+  color.g += ambient.g + (light1_intensity[1] * shadow * attenuation) * (diffuse.g + specular.g);        
+  color.b += ambient.b + (light1_intensity[2] * shadow * attenuation) * (diffuse.b + specular.b);   
 
 	return color;
 }
